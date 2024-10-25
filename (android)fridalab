@@ -1,0 +1,122 @@
+setImmediate(function(){
+	Java.perform(function(){
+		var challenge_01 = Java.use("uk.rossmarks.fridalab.challenge_01"); 
+		/*challenge_01.getChall01Int.implementation=function(){
+			return 1;
+		}*/
+		challenge_01.chall01.value=1;
+		console.log("challnge 1");
+		
+		// var challenge_02= Java.use("uk.rossmarks.fridalab.MainActivity");
+		//static으로 선언하지 않으면 정적 함수가 자동으로 생성되지 않기 때문에, 이 함수를 실행하려면 이 함수를 가지고 있는 인스턴스를 직접 찾아서 함수를 실행
+		// static이 아니라서, use가 안됨 , 별도 호출이 없어서 동작x
+		Java.choose('uk.rossmarks.fridalab.MainActivity', { // attach 해면 됨
+		  onMatch: function(instance) {
+			instance.chall02();
+		  },
+		  onComplete: function() {
+			console.log('Challenge 2 clear!');
+		  }
+		});
+		
+		var challenge_03= Java.use("uk.rossmarks.fridalab.MainActivity"); // 얘는 디컴파일에서는 안보이나 smail에서는 호출 탐지 use 가능( MainActivity->chall03()Z, p1)
+		challenge_03.chall03.implementation=function(){
+			return true;
+		}
+		
+		Java.choose("uk.rossmarks.fridalab.MainActivity",{
+			onMatch: function(instance){
+				var str= Java.use("java.lang.String");
+				str="frida";
+				instance.chall04(str);
+			},
+			onComplete: function(){
+				console.log('Challenge 4 clear!');
+			}
+		});
+		
+		var challenge_05=Java.use("uk.rossmarks.fridalab.MainActivity");
+		challenge_05.chall05.implementation=function(s){
+			var str2= Java.use("java.lang.String");
+			str2="frida";
+			challenge_05.chall05.call(this,str2);
+		}
+		
+		/*
+		var challenge_06_func=Java.use("uk.rossmarks.fridalab.challenge_06");
+		challenge_06_func.addChall06.implementation=function(v)
+		{
+			challenge_06_func.addChall06.call(this,100);
+		}*/
+		setTimeout(function(){ 
+			var challenge_06_func=Java.use("uk.rossmarks.fridalab.challenge_06");
+			Java.choose("uk.rossmarks.fridalab.MainActivity",{
+			onMatch:function(instance){
+				instance.chall06(challenge_06_func.chall06.value);
+				//instance.chall06(1600); 100 2번 이 아니라 1600이되네 이렇게 해도 되긴하다. 대신 console로 확인필요
+			},
+			onComplete:function(){
+				console.log("chall06 end");
+			}
+		});
+		}, 10000);
+		
+		Java.choose("uk.rossmarks.fridalab.MainActivity",{
+			onMatch:function(instance){
+				var challenge_07=Java.use("uk.rossmarks.fridalab.challenge_07");
+				var chall_07 = challenge_07.chall07.value;
+				var i=1000;
+				while(!(String(i)==chall_07))
+				{
+					i=i+1;
+					if(i>11000)
+					{
+						console.log("error");
+						break;
+					}
+				}
+
+				instance.chall07(String(i));
+			},
+			onComplete:function(){
+				console.log("chall07_end");
+			}
+		});
+		
+		
+		//Frida에서는 캐스팅은 Java.cast(handle, klass) 함수로 할 수 있다. 
+		//첫 번째 인자(handle)로 받은 기존 인스턴스를 두 번째로 인자(klass)의 클래스로 캐스팅하는 함수,  setText()
+		
+		/*var AppCompatActivity= Java.use("android.support.v7.app.AppCompatActivity");
+		var check_id=AppCompatActivity.findViewById(0x7F07002F);;
+		인스턴스 있어야함
+		*/ 
+		Java.choose("uk.rossmarks.fridalab.MainActivity",{
+			onMatch:function(instance){
+				var btnClass = Java.use('android.widget.Button');
+				var id = instance.findViewById(0x7F07002F);
+				var check_btn=Java.cast(id,btnClass);
+				var string=Java.use("java.lang.String");
+				check_btn.setText(string.$new("Confirm"));
+				
+			},
+			onComplete:function()
+			{
+				console.log("chall08");//
+			}
+		});
+		
+		
+
+
+
+		
+		
+
+	});
+});
+
+
+//chall1_bypass();
+//chall2_bypass();
+
