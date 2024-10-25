@@ -1,0 +1,89 @@
+/*
+ELF Initialization Function Table' 밑에 sub_3180()함수가 있습니다.
+
+'ELF Initialization Function Table'는 프로그램이 실행될 때 처음 실행 할 함수들을 모아놓은 곳
+
+logcat | grep UnCrackable3
+09-05 18:55:06.979 23990 24018 V UnCrackable3: Tampering detected! Terminating...
+09-05 18:55:06.982 23990 23990 V UnCrackable3: CRC[lib/x86_64/libfoo.so] = 2856060114
+09-05 18:55:06.982 23990 23990 V UnCrackable3: CRC[lib/x86/libfoo.so] = 1618896864
+09-05 18:55:06.982 23990 23990 V UnCrackable3: CRC[lib/armeabi-v7a/libfoo.so] = 881998371
+09-05 18:55:06.982 23990 23990 V UnCrackable3: CRC[lib/arm64-v8a/libfoo.so] = 1608485481
+09-05 18:55:06.982 23990 23990 V UnCrackable3: CRC[classes.dex] = 25235683
+
+libfoo.so 파일은 보게되면 사용자가 정의해놓은 함수, 즉 check_code함수가 있는 라이브러리입니다. 반면에 libc.so는 다른 기본 함수들을 불러오는 라이브러리이구요.
+따라서 strstr은 기존에 있는 함수이기때문에 libc.so
+Module.findBaseAddress('libfoo.so')를 통해 libfoo.so 파일을 찾고있는데, 코드가 먼저 프로세스에 삽입됐고
+libfoo.so 를 로드하는 앱은 코드가 삽입 된 후에 켜지기 때문에 코드가 libfoo.so 파일을 찾을 수 없게됩니다.
+따라서 앱이 켜진 다음 hook 함수를 실행하여 libfoo.so 파일을 찾기 위해 1초(setTimeout의 두 번째 인자, 1000ms)의 딜레이를 준 것 입니다.
+frida는 아직 앱이 로드되었을때 이벤트를 핸들링하는 기능이 없기 때문에 frida-onload(링크)와 같은 외부 라이브러리를 설치해서 코딩해야 합니다. 
+하지만 저는 그냥 단순하게 setTimeout 함수를 달아줘서 간단하게 해결할 수 있었습니다.
+*/
+function hook() {
+  let targetAddress = 0x00003446; 
+  /*후킹 코드를 작성하기 전에 우리는 x86_64 폴더의 libfoo.so 파일을 정적분석했지만, 
+  실제 녹스 앱플레이어는 x86 아키텍쳐이기 때문에 후킹할 메모리 주소를 얻을때는 x86 폴더에 있는 libfoo.so 파일에서 찾아야 합니다
+  아니 memu 이거 x86_64 로 확인되고 server도 64인데 주소값 덤프뜨면 0xfffcf580 이런식 x86으로 나오네 답도 x86에 맞음
+  */
+  let moduleBaseAddress = Module.findBaseAddress('libfoo.so');
+  let targetRealAddrees = moduleBaseAddress.add(targetAddress);
+
+  Interceptor.attach(targetRealAddrees, {
+    onEnter() {
+      let esp = this.context.esp;
+      console.warn("[*] Hexdump at esp: " + esp);
+      console.log(hexdump(esp, { length: 24 }));
+    }
+  });
+}
+
+setTimeout(hook,1000);
+
+setImmediate(function(){
+	Java.perform(function(){
+		Interceptor.attach(Module.getExportByName("libc.so", "fopen"), { //얘는 NULL 이고 재는 아니고
+			onEnter:function(args){
+				var str1=Memory.readUtf8String(args[0]);
+				if(str1=="/proc/self/maps"){
+					Interceptor.attach(Module.getExportByName("libfoo.so", "strstr"),{
+						onEnter:function(args2){
+							var str2=Memory.readUtf8String(args2[1]);
+							if(str2=="frida" || str2=="xposed")
+								this.isTarget = true; // 리턴을 위한 체크용
+						},
+						onLeave:function(retval){
+							if(this.isTarget == true)
+							{
+								retval.replace(0);
+							}
+						}
+					});
+				}
+			},
+			onLeave:function(retval){
+			}
+		});
+	var system=Java.use("java.lang.System");
+	system.exit.implementation = function(i){
+		console.log("system out");
+	}
+	
+	Interceptor.attach(Module.getExportByName(null,"strncpy"),{
+		onEnter:function(args3){
+
+		},
+		onLeave:function(retval){
+			
+		}
+	});
+	
+	
+	/*
+	var codecheck = Java.use("sg.vantagepoint.uncrackable3.CodeCheck");
+	codecheck.check_code.implementation = function(s){
+		return true;
+	}*/
+	
+	
+	});
+});
