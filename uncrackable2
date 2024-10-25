@@ -1,0 +1,84 @@
+
+function hook()
+{
+	Interceptor.attach(Module.findExportByName("libfoo.so","strncmp"),{
+		onEnter:function(args){
+			var str1= Memory.readUtf8String(args[0]);
+			var str2=Memory.readUtf8String(args[1]);
+			if(str1.indexOf('AAAAAAAAAAAAAAAAAAAAAAA')!== -1){
+				console.log(str2);
+				console.log(str1);
+			}
+		},
+		onLeave:function(){}
+	});
+}
+
+setTimeout(hook,1000);// 뒤늦게 호출 -> uncrackable3.js 에 설명
+
+setImmediate(function(){
+	Java.perform(function(){
+		/*
+		var system_class= Java.use("java.lang.System");
+		system_class.exit.implementation = function(i)
+		{
+			console.log("system_exit");
+		}*/
+		
+		var c_class= Java.use("sg.vantagepoint.a.b");
+		c_class.a.implementation=function(){
+			return false;
+		}
+		c_class.b.implementation=function(){
+			return false;
+		}
+		c_class.c.implementation=function(){
+			return false;
+		}
+
+		// 현재 Async task에서 Debug.isDebuggerConnected()를 계속 탐지하고 있다.
+		// While문을 계속 탐지하면서 isDebuggerConnected()가 return true이면, a 함수를 호출해서 
+		// Debugger detected를 띄워줌. 현재 a 함수를 후킹했기 때문에 아래의 내용은 할 필요가 없다.
+		// return false로 하면, [+] hooking Debugger check가 무한루프에서 계속 반복되기 때문에 엄청 뜨고,
+		// return true로 하면, 바로 while문을 끝내고, 나오기 때문에 한번만 호출된다.
+		/*var Debug = Java.use("android.os.Debug");
+		Debug.isDebuggerConnected.implementation = function(){
+			console.log("[+] hooking Debugger check")
+			return false;
+		}*///
+		
+		
+		
+		/*		
+		이거는 py으로 attach 했을때 반대 상황 
+		var system_class= Java.use("java.lang.System");
+		system_class.exit.implementation = function(i)
+		{
+			console.log("system_exit");
+		}
+		해당 코드는 경고문을 클릭해야 exit 가 되니 attach 후 루팅우회가 가능하나
+		var c_class= Java.use("sg.vantagepoint.a.c");
+		c_class.a.implementation=function(){
+			return false;
+		}
+		해당 방식은 우회 코드가 실행되기전 다 로드되니 루팅이 불가
+		*/
+		
+		
+		// 아 에러 뜬게 so 파일을 로드후 붙어야되는데, 즉 attach 라서 호출하여 루팅우회후 재호출(파일변경등)하거나 , attach로 붙여야 됨
+		/*
+		Interceptor.attach(Module.findExportByName("libfoo.so","strncmp"),{
+			onEnter:function(args){
+				var str1= Memory.readUtf8String(args[0]);
+				var str2=Memory.readUtf8String(args[1]);
+				if(str1.indexOf('AAAAAAAAAAAAAAAAAAAAAAA')!== -1){
+					console.log(str2);
+					console.log(str1);
+				}
+			},
+			onLeave:function(){}
+		});*/
+		
+
+	});
+});
