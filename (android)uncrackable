@@ -1,0 +1,60 @@
+setImmediate(function(){
+	/*
+	Java.perform(function(){
+		Java.enumerateLoadedClasses({
+		"onMatch":function(classname){
+			console.log(classname);
+		},
+		"onComplete":function(){}
+		});
+	
+	});*/
+
+	Java.perform(function(){
+		var c_class= Java.use("sg.vantagepoint.a.c");
+		c_class.a.implementation=function(){
+			return false;
+		}
+		c_class.b.implementation=function(){
+			return false;
+		}
+		c_class.c.implementation=function(){
+			return false;
+		}
+		var a_class=Java.use("sg.vantagepoint.a.a");
+		a_class.a.overload('[B','[B').implementation=function(byte_1,byte_2) //바이트형 배열 '[B'
+		{
+			var str=a_class.a.call(this,byte_1,byte_2);
+			var decrypted_text=Java.use("java.lang.String");
+			for(var i=0; i<str.length;i++)
+			{
+				decrypted_text += String.fromCharCode(str[i]); // 바이트형 문자로 바꾸기
+			}
+			console.log(decrypted_text);
+			
+			return str
+		}
+	});
+	
+	/*Java.perform(function(){
+		var system_class= Java.use("java.lang.System");
+		system_class.exit.implementation = function(i)
+		{
+			console.log("system_exit");
+		}
+	});*/
+	/*    var MainActivity = Java.use('sg.vantagepoint.uncrackable2.MainActivity');
+    MainActivity.a.overload('java.lang.String').implementation = function(param1){
+        console.log("[+] hooking Mainactivity.a :" + param1);
+    }*/
+	/* 이거는 attach 형식이다보니처음에 exit 된후에 접근하느라 정상 접근 x
+	Java.choose("sg.vantagepoint.uncrackable1.MainActivity",{
+		onMatch:function(instance){
+			//var bundle=Java.use("android.os.Bundle");
+			instance.a("test");
+		},
+		onComplete:function(){
+			console.log("check");
+		}
+	});*/
+});
