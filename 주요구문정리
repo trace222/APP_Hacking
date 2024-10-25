@@ -1,0 +1,508 @@
+- frida-ls-devices 명령을 실행하여 연결된 모든 기기 정보를 확인
+- frida-ps -D emulator-5554 (프리다 서버 확인)
+
+-Frida의 주요 기능
+	Injection 임의 코드를 메모리나 애플리케이션에 주입합니다.
+	Interception 특정 함수를 후킹하여 매개 변수나 반환 값을 수정하고, 함수를 재작성합니다.
+	Stalking 애플리케이션에서 명령어 레벨의 코드를 추적하여 디버깅하거나 메모리 내의 데이터를 검색, 추출합니다.
+	
+	frida 앱을 실행하여 frida와 애플리케이션을 연결, 스크립트 로드
+	frida-ps 프로세스 목록 출력 
+	frida-trace 함수 호출 추적
+	frida-ls-devices 연결된 기기 목록 출력 
+	frida-kill 동작중인 프로세스 종료
+	U , -usb USB로 연결된 기기를 연결
+	-D <DEVICE ID> 가상 기기를 연결
+	
+	Attach
+	-F 현재 foreground에서 실행되고 있는 앱을 연결
+	-n <PACKAGE NAME> 앱의 패키지 이름으로 앱을 연결 
+	-p <PID> 앱의 프로세스 ID로 앱을 연결
+	Spawn
+	-f <PACKAGE NAME> 앱을 실행하고, 연결
+	
+	frida -U -F : usb에 연결된 기기에 현재 실행되고있는(포그라운드) 앱연결
+	frida -D emulator-5554 -f com.google.android.calendar : 가상기기에서 캘린더 앱 Spawn
+	
+	Load Script 
+	-l <SCRIPT> frida script 파일을 로드
+	frida -U -F -l script.js
+	
+	frida-trace
+	함수 호출을 동적으로 추적합니다. 마찬가지로 공용 옵션을 사용해서 연결할 기기를 지정하고, 분석할 앱에 attach 하거나, 
+	새롭게 spawn 하면서 추적하고자 하는 함수를 지정합니다. 이를 통해 원하는 앱의 분석하고자 하는 함수 호출을 추
+		Attach
+			-F 현재 foreground에서 실행되고 있는 앱을 연결
+			-n <PACKAGE NAME> 앱의 패키지 이름으로 앱을 연결
+			-p <PID> 앱의 프로세스 ID로 앱을 연결
+		Spawn
+			-f <PACKAGE NAME> 앱을 실행하고, 연결
+		Include/Exclude 
+			-I <MODULE> 모듈의 모든 함수를 추적
+			-X <MODULE> 모듈의 모든 함수를 추적에서 제외
+			-i <MOUDULE!FUNCTION> 함수를 추적(glob pattern)
+			-x <MODULE!FUNCTION> 함수를 추적에서 제외(glob pattern)
+			-a <FUNTION!offset> 함수를 추적(offset) //-a 는 -i 와 마찬가지로 include function을 지정할 수 있으나, 
+				그와 다르게 offset을 기반으로 동작합니다. 추적을 원하는 함수명이 부모 모듈에도 선언되어 있는 경우에는, -i 옵션으로 원하는 함수를 특정할 수 없습니다. 
+				따라서 -a <FUNCTION!function’s entry point> 와 같이 추적하고자 하는 함수의 offset을 함께 전달하여 함수를 추적
+		frida-trace -D emulator-5554 -f com.android.chrome -i "recv*" -i "send*"
+			Instrumenting...
+			recv: Loaded handler at "/home/user/libc.so/recv.js"
+			recvfrom: Loaded handler at "/home/user/libc.so/recvfrom.js"
+			recvmsg: Loaded handler at "/home/user/libc.so/recvmsg.js"
+			recvmmsg: Loaded handler at "/home/user/libc.so/recvmmsg.js"
+			sendfile64: Loaded handler at "/home/user/libc.so/sendfile64.js"
+			sendmmsg: Loaded handler at "/home/user/libc.so/sendmmsg.js"
+			/* TID 0x7f05 */
+			1959 ms  recvfrom()
+            /* TID 0x7f38 */
+			2059 ms  recvfrom() 	
+			2062 ms  recvfrom() 
+            /* TID 0x7f05 */
+			2085 ms  recvfrom()
+			2085 ms  recvfrom()
+			2089 ms  recvfrom() 
+		Logging
+			-d, --decorate 추적할 함수가 속한 모듈이름을 함께 기록
+		Others
+			-O <TEXT FILE> 명령줄을 텍스트 파일로 입력
+			additional-options.txt <== -f com.android.chrome --decorate -i "recv*" -i "send*"
+		frida-trace -D emulator-5554 -O additional-options.txt
+			sendfile: Loaded handler at "/home/user/libc.so/sendfile.js"
+			sendmsg: Loaded handler at "/home/user/libc.so/sendmsg.js"
+			sendto: Loaded handler at "/home/user/libc.so/sendto.js"
+			Started tracing 10 functions. Press Ctrl+C to stop.
+			* TID 0x181c */
+			2618 ms  recvfrom() [libc.so]
+			/* TID 0x184b */
+			2767 ms  recvfrom() [libc.so]
+			2768 ms  recvfrom() [libc.so]
+	
+	frida-ls-devices
+		연결된 기기 목록 출력
+	
+	frida-kill
+		Kill
+		frida-kill -D <DEVICE-ID> <PID> 프로세스 종료
+		frida-ps -D emulator-5554 -a
+			27157  Chrome    com.android.chrome
+			21430  Drive     com.google.android.apps.docs
+		frida-kill -D emulator-5554 27157
+
+- Process
+
+	Process.enumerateModules() 
+	프로세스에 맵핑된 모든 모듈을 열거합니다.
+
+	Process.findModuleByAddress(address)
+	Process.getModuleByAddress(address)
+	첫 번째 인자에 전달된 주소가 어떤 모듈에 할당된 메모리인지 알아낼 수 있습니다.
+
+	Process.findModuleByName(name)
+	Process.getModuleByName(name)
+	첫 번째 인자에 전달된 모듈 이름의 주소를 가져옵니다.
+
+	Process.findRangeByAddress(address)
+	Process.getRangeByAddress(address)
+	전달된 메모리의 페이지 크기와 권한을 알아낼 수 있습니다.
+	
+	var modules = Process.enumerateModules()[0];
+	console.log("modules Base: ", modules.base);
+	console.log("modules Path: ", modules.path);
+	var modules_info = Process.findRangeByAddress(ptr(modules.base))
+	console.log("Protection: ", modules_info.protection);
+		enumerateModules 함수로 부터 반환된 첫 번째 객체는 실행한 앱을 나타냅니다. 
+		이후, findRangeByAddress 함수에 앞서 알아낸 첫 번째 모듈의 베이스를 인자로 전달하여 더 자세한 정보인 메모리의 권한을 가져오고 출력
+	
+- Thread
+	Thread는 현재 스레드에서 백트레이스를 출력할 수 있으며, 실행을 일시적으로 중지시킬 수 있는 객체
+	버그가 발생하거나 실행 흐름을 파악할 때 주로 백트레이스를 확인
+	sleep 함수의 경우 앱에서 이용자와 상호 작용이 필요할 때 스크립트의 실행을 일시적으로 중지시킬 때 사용
+	
+	Thread.backtrace([context, backtracer]) 현재 스레드의 백트레이스를 제공합니다.
+		선택 사항인 backtracer 인수는 사용할 백트레이서 종류를 지정하며 Backtracer.FUZZY 또는 Backtracer.ACCURATE 중 하나여야 합니다.
+	Thread.sleep(delay) 현재 스레드의 실행을 중지하기 위해 사용되며, 초 단위를 사용합니다.
+	
+	console.log('called `from:\n' + Thread.backtrace(this.context, Backtracer.FUZZY).map(DebugSymbol.fromAddress).join('\n') + '\n');
+		backtrace 함수를 사용해 앱의 백트레이스를 조회
+	
+	frida -D emulator-5554 -f com.google.android.calendar -l thread.js
+		Spawning `com.google.android.calendar`...
+		called from:
+		...
+		0x74f88297a967 frida-agent-64.so!0x1f4967
+		0x74f882a14828 frida-agent-64.so!0x28e828
+		0x74f882985d7c frida-agent-64.so!0x1ffd7c
+		0x74f91ce94bac libc.so!_ZL15__pthread_startPv+0x1c
+		0x74f91ce2cf2e libc.so!__start_thread+0x3e
+		// start 부터 거꾸로?
+	
+	IOS의경우 
+	frida -U -F -l thread.js 
+		...
+		0x10f6f7e50
+		0x10f62a3ec
+		0x196d8bd8c libsystem_pthread.dylib!_pthread_start
+
+-Memory
+	Memory는 메모리와 관련된 행위를 할 수 있는 객체이며, 메모리의 할당, 검색, 복사, 패치, 권한 변경 가능
+	
+	Memory.scan(address, size, pattern, callbacks)
+		특정 주소부터 원하는만큼 메모리를 스캔하여 임의의 바이트를 찾습니다. 
+		scanSync 함수와 다른 점은 콜백 함수를 등록하여 특정 바이트를 찾았을 때와 스캔이 종료되었을 때의 코드를 구성할 수 있습니다.
+	Memory.scanSync(address, size, pattern)
+		특정 주소부터 원하는만큼 메모리를 스캔하여 임의의 바이트를 찾습니다.
+	Memory.protect(address, size, protection)
+		메모리의 권한을 변경합니다.
+	Memory.alloc(size[, options])
+		프로세스의 힙 메모리 내의 전달된 크기만큼 메모리를 할당하고 주소를 NativePointer 형태로 반환합니다.
+	Memory.allocUtf8String(str)
+		프로세스의 힙 메모리 내의 Utf8 형태의 문자열을 할당하고 주소를 NativePointer 형태로 반환합니다.
+	
+	
+	
+	var m = Process.enumerateModules()[0];
+	var pattern = "2f 6c 69 62" // "/lib"
+	var perm = 0;
+	Memory.scan(m.base, m.size, pattern, {
+		onMatch: function(address, size) {
+			console.log('Found match at ' + address);
+			perm = Process.findRangeByAddress(address);// get protection
+			console.log("Protection: " + perm.protection);
+			
+			Memory.protect(address ,4096, 'rw-'); // change protection
+		},
+		onComplete: function () {
+			console.log('Done');
+		}
+	})
+	Process.enumerateModules 함수를 이용해 앱의 베이스 주소를 가져오고, Memory.scan 함수를 이용해 앱 내에 “/lib” 바이트가 존재하는지 찾습니다
+	해당 바이트를 찾으면 바이트가 위치한 메모리 주소의 권한을 확인하고, Memory.protect 함수를 통해 페이지의 권한을 ‘rw-’로 변경
+	memory.protect 함수들은 런타임에서 쓰기 불가능한 페이지의 권한을 변경하고, 코드를 패치하거나 추가할 때 주로 사용
+	
+	var string = Memory.allocUtf8String("Dreamhack");
+	console.log('Allocated string address: ' + string);
+	var pattern2 = "68 61 63 6b";   // "hack"
+	var result = Memory.scanSync(string, 0x100, pattern2);
+	console.log("Memory.scanSync() result: " + JSON.stringify(result));
+	dreamhack 문자열 메모리 동적 할당 -> hack 패턴 지정, 문자열 메모리부터 0x100 만큼 hack 문자있나 스캔, result에 해당 "hack"을 찾은 속성(주소,사이즈) 배열 들어감
+	frida -D emulator-5554 -f com.google.android.calendar -l memory.js
+		Allocated string address: 0x7b539b838670
+		Memory.scanSync() result: [{"address":"0x7b539b838675","size":4}]
+		Found match at 0x5b13a8a2fd5c
+		Protection: r--
+		Done
+		ios
+			Allocated string address: 0x114c1e620
+			Memory.scanSync() result: [{"address":"0x114c1e625","size":4}]
+			Found match at 0x1011f0b48
+			Protection: r-x
+			Found match at 0x1011f0bdc
+			Protection: rw-
+
+- Module
+	Module은 프로세스의 주소를 알아내는 용도로 사용하는 객체입니다. 해당 객체를 사용하면 편리하게 프로세스의 베이스 주소, 외부 함수 주소를 가져올 수 있습니다
+	
+	Module.findBaseAddress(name)
+	Module.getBaseAddress(name)
+	인자로 전달된 모듈의 베이스 주소를 알아냅니다.
+
+	Module.findExportByName(moduleName|null, exportName)
+	Module.getExportByName(moduleName|null, exportName)
+	외부 함수의 주소를 가져올 수 있습니다. 모듈 이름을 알 수 없는 경우 첫 번째 인자에 null을 전달합니다.
+			
+	var fopen = Module.findExportByName(null, "fopen");
+	console.log("fopen: " + fopen);
+	
+	// iOS
+	var mName = "libsystem_c.dylib" 
+	// Android
+	var mName = "libc.so" 
+	
+	var fopen_m = Module.findExportByName(mName, "fopen");
+	console.log("fopen with module: " + fopen_m);
+		findExportByName 함수의 첫 번째 인자로 null을 삽입하고 fopen 함수의 주소를 가져옵니다. 
+		이후, 첫 번째 인자로 모듈 이름을 명시해 또 다른 방법으로 함수 주소를 가져옵니다.
+	
+	frida -D emulator-5554 -f com.google.android.calendar -l module.js
+		fopen: 0x74f91ce8d5e0
+		fopen with module: 0x74f91ce8d5e0
+		ios
+		fopen: 0x196c9e600
+		fopen use class: 0x196c9e600
+
+- 키워드
+	Process: 프로세스와 관련된 정보를 조회할 수 있는 객체
+	Thread: 현재 스레드에서 백트레이스를 출력할 수 있으며, 실행을 일시적으로 중지시킬 수 있는 객체
+	Memory: 메모리와 관련된 행위를 할 수 있는 객체
+	Module: 프로세스의 주소를 알아내는 용도로 사용하는 객체
+
+
+- Interceptor
+	Interceptor는 특정 함수를 명시하고, 해당 함수가 호출되면 임의의 코드를 실행하고, 정보를 조회할 수 있는 기능을 제공
+	
+	onEnter(args) { code } , onLeave(retval) { code }
+	attach는 콜백을 등록할 수 있으며 콜백 형식은 다음과 같습니다
+	명시한 함수가 호출되면 함수가 실행될 때와 종료될 때의 레지스터와 스택 등을 확인할 수 있으며 임의 코드를 추가로 실행할 수 있습니다.
+	
+	Interceptor.attach(target, callbacks[, data])
+		target에 해당하는 함수가 호출되면 등록한 콜백에 따라 임의 코드를 실행합니다. 함수의 인자를 조회하거나 조작 등 실행 흐름을 파악할 수 있습니다.
+	Interceptor.replace(target, replacement[, data])
+		target에 해당하는 함수가 호출되면 함수의 기능을 실행하지 않고 미리 정의된 임의 코드를 실행
+		
+	var open = Module.findExportByName(null, "open");
+	Interceptor.attach(open, {
+		onEnter(args) {
+			console.log("Filename: " + Memory.readUtf8String(args[0]));	// Android
+			// console.log("Filename: " + args[0].readCString() + ", " + this.context.x0.readCString());	// iOS
+			console.log("flags: " + args[1].toInt32());	// Android
+			// console.log("flags: " + args[1].toInt32() + ", " + this.context.x1);	// iOS
+		},
+		onLeave(retval) {
+			console.log("ret: " + retval);
+		}
+	});
+	// open 함수의 주소를 알아내고, attach 함수의 인자로 전달합니다. 만약 open 함수가 실행되면 onEnter 콜백 함수에서 첫 번째 인자와 두 번째 인자를 출력
+	// args 배열과 this.context 내 레지스터 이름을 이용
+	$ frida -D emulator-5554 -f com.google.android.calendar -l interceptor.js
+		[Android Emulator 5554::com.google.android.calendar]-> Filename: /proc/self/cmdline, /proc/self/cmdline
+		flags: 524288, 0x80000
+		ret: 0x28
+		Filename: /system/framework/org.apache.http.legacy.boot.jar.x86_64.flock, /system/framework/org.apache.http.legacy.boot.jar.x86_64.flock
+		flags: 66, 0x42
+		ret: 0xffffffffffffffff
+	ios -Cydia 앱이 포그라운드 프로세스, 즉 앱이 iOS 기기에서 화면이 보이는 상태로 있어야 합니다
+	open 함수는 특정 패키지의 정보를 확인할 때 호출됩니다. 해당 스크립트를 실행하고 새 패키지 탭에 등록된 패키지를 클릭하면 스크립트가 올바르게 동작
+		frida -U -F -l interceptor.js 
+		Filename: /Applications/Cydia.app/Sections/System.png, /Applications/Cydia.app/Sections/System.png
+		flags: 0, 0x0
+		ret: 0x2d
+	
+- Interceptor & Backtrace
+	 Interceptor를 통해 임의 함수를 후킹하고, Thread.backtrace를 사용하면 함수가 호출되기까지의 과정을 알아낼 수 있습니다
+	var open = Module.findExportByName(null, "open");
+	Interceptor.attach(open, {
+		onEnter(args) {
+			console.log('called from:\n' + 
+				Thread.backtrace(this.context, Backtracer.FUZZY).map(DebugSymbol.fromAddress).join('\n') + '\n');
+		},
+		onLeave(retval) {
+			console.log("ret: " + retval);
+		}
+	});
+	frida -D emulator-5554 -f com.google.android.calendar -l backtrace.js
+		[Android Emulator 5554::com.google.android.calendar]-> called from:
+		0x74f91ce8d628 libc.so!fopen+0x48
+		0x74f91d15b179 libcutils.so!0xc179
+		0x74f920117949
+		0x74f91ce7cc8a libc.so!__sfvwrite+0x19a
+		0x74f91ce72d59 libc.so!__vfprintf+0x3d39
+		...
+		ret: 0x28
+
+- JAVA
+	Java는 대상 프로세스가 Java VM을 로드하여 동작할 때 사용하며, Java와 관련된 기능을 제공
+	
+	Java.perform(fn)
+		현재 Frida 스레드를 Java VM에 attach 하고, fn 인자로 전달된 함수를 호출합니다. 
+		이 때 fn 함수는 자바 문법이 아닌 자바스크립트 형태의 문법으로 작성되어도 정상적으로 작동합니다.
+	Java.use(className)
+		클래스 이름을 인자로 전달받아 해당 클래스를 자바스크립트에서 사용할 수 있도록 Wrapper를 제공합니다.
+		Wrapper를 통해 클래스 내의 메소드를 자유롭게 호출하고, 후킹할 수 있습니다.
+	Java.choose(className, callbacks)
+		자바 힙 메모리 내에서 인자로 전달된 클래스가 이미 객체화되어 있는 객체를 찾습니다.
+		callbacks 인자로 전달된 콜백 함수에서 객체를 찾았을 때와 검색이 완료되었을 때의 콜백을 추가할 수 있습니다.
+	Java.vm
+		JavaVM 객체를 반환합니다. 일반적으로 JNI 관련 함수를 후킹하기 위해 JNIEnv 구조체의 주소를 얻어올 때 사용합니다. 
+		JNIEnv 주소는 Java.vm.getEnv()를 통해 얻을 수 있습니다.
+	
+	Java.perform(function() {
+		setTimeout(()=>{
+			makeToast();},200)
+	})
+	function makeToast(){
+		var context = Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
+		var toast = Java.use("android.widget.Toast");
+    
+		// toast.makeText(context, Java.use("java.lang.String").$new("Welcome to Dreamhack"), 1).show();
+		 Java.scheduleOnMainThread(function() {  toast.makeText(context, Java.use("java.lang.String").$new("Welcome to Dreamhack"), 1).show();})
+		
+	};
+	
+	frida -D emulator-5554 -f com.google.android.calendar -l java.js
+		캘린터 오픈 시 아래 "Welcome to Dreamhack" 문자열 메시지 출력
+		
+- ObjC
+	ObjC는 Objective-C 클래스를 로드하는 macOS 또는 iOS 앱에서 사용하며 Objective-C와 관련된 정보를 제공
+	
+	ObjC.availiable
+		대상 프로세스에 Objective-C 클래스가 로드되었는지 확인하는 기능입니다. 이는 macOS/iOS 앱인지를 판단하는 용도로 사용합니다.
+	ObjC.api
+		ObjC 클래스의 메소드를 사용할 수 있도록 주소를 반환합니다.
+	ObjC.classes
+		ObjC의 클래스 정보를 모두 반환합니다. 해당 기능을 통해 다양한 함수를 앱 내에서 실행할 수 있습니다.
+	ObjC.schedule[queue, work]
+		queue에서 지정한 대기열에 work 자바스크립트 함수를 예약합니다.
+		
+	var UIAlertView = ObjC.classes['UIAlertView'];
+	ObjC.schedule(ObjC.mainQueue, function () {
+		var view = UIAlertView.alloc().initWithTitle_message_delegate_cancelButtonTitle_otherButtonTitles_(
+			"Dreamhack",
+			"Welcome from Dreamhack",
+			NULL,
+			"OK",
+			NULL);
+		view.show();
+		view.release();
+	});
+		ObjC.classes를 통해 UIKit 프레임워크의 함수 주소를 구합니다. 해당 함수의 인자를 설정하고 호출하여 앱 View에 알림창을 띄우는 것을 확인
+		UIKit 프레임워크의 함수를 호출해서 알림창을 띄우는 스크립트입니다. 
+		이와 같이 ObjC.classes로 가져온 함수를 호출하기 위해서는 해당 함수에 대한 이해가 필요합니다. 
+		함수에 대한 자세한 정보는 아래 첨부한 애플 개발자 페이지에서 확인
+	frida -U -F -l objc.js 
+		앱 오픈시 "Dreamhack" 제목의 "Welcome from Dreamhack" 내용을 가진 알림view 출력
+	
+
+- Int64 / Uint64
+	Int64 와 Uint64 는 인자로 전달한 값을 숫자로 변환하는 객체입니다.
+	new Int64(v) 또는 int64 , uint64 형태로 사용하며, 해당 객체의 인자로 문자열, 16진수 형태의 값이 전달되면 10진수로 변환하여 연산을 수행
+	특정 함수를 후킹하거나 포인터 주소에 대한 연산이 필요할 때 주로 사용
+	해당 객체는 숫자를 전달할 경우 오브젝트 형태로 변환하며, 일반적인 숫자와 타입이 다르다
+	Int64와 Uint64는 음수 표현 가능 여부의 차이만 존재
+	
+	add(rhs) ,sub(rhs) ,and(rhs) , or(rhs) , xor(rhs)
+		변환된 10진수 값에 대해 산술 연산을 수행합니다.
+	shr(n) , shl(n)
+		변환된 10진수 값에 대해 n 비트만큼 쉬프트 연산을 수행할 수 있습니다.
+	compare(rhs)
+		인자로 전달된 값과 비교합니다.
+	toNumber()
+		Int64 또는 Uint64를 사용한 정수 객체를 숫자 타입으로 변경합니다.
+	toString([radix = 10])
+		변환된 10진수의 값을 문자열 형태로 변환합니다. radix는 진수를 나타내며, 기본값은 10입니다.
+		
+	function add(num, num2) {
+		console.log("type: " + typeof(num) + ", " + typeof(num2));
+		var num_obj = int64(num);
+		var num_obj2 = int64(num2);
+		var sum = num_obj.add(num_obj2);
+		console.log("add sum: " + sum + " type: " + typeof(sum));
+		
+		var result = num_obj.compare(num_obj2);
+		if(!result) { console.log("Same.")}
+		else { console.log("Different.");}
+		
+		console.log("Decimal: " + num_obj.toString(10));
+		console.log("Hexadecimal: " + num_obj.toString(16));
+	}
+	add("100", "100");
+	
+	frida -D emulator-5554 -f com.google.android.calendar -l int64.js
+		type: string, string
+		add sum: 200 type: object
+		Same.
+		Decimal: 100
+		Hexadecimal: 64
+	
+	Add 함수는 전달된 문자열 형태의 값을 Int64 객체 형태로 변환하고, 덧셈 결과와 변환된 타입을 출력합니다.
+	compare 함수는 전달된 문자열 형태의 값을 Int64 객체 형태로 변환하고, compare 함수를 통해 두 개의 값을 비교합니다.
+	convert 함수는 전달된 문자열 형태의 값을 Int64 객체 형태로 변환하고, toString 함수를 통해 특정 진수로 변환합니다.
+	
+- NativePointer
+	NativePointer 는 인자로 전달된 문자열 값을 메모리 포인터로 변환하는 객체입니다. 
+	new NativePointer(s) 또는 ptr 형태로 사용하며, 인자 s는 10진수 혹은 16진수 형태의 메모리 주소
+	
+	isNull()
+		포인터가 NULL인지 검사합니다.
+	add(rhs) ,sub(rhs) ,and(rhs) , or(rhs) , xor(rhs)
+		포인터 값을 각 함수에 해당하는 산술 연산을 수행합니다.
+	compare(rhs)
+		전달된 인자 값과 정수 형태로 비교합니다.
+	toInt32()
+		NativePointer 타입을 signed 32-bit 정수로 캐스팅합니다.
+	toString([radix = 16])
+		포인터 값을 문자열로 변환합니다. radix는 진수를 나타내며, 기본값은 16입니다.
+	readPointer() , writePointer(ptr)
+		포인터 주소에서 NativePointer 형태로 값을 읽거나 씁니다. 이 때 포인터의 크기는 대상 프로세스의 포인터 크기로 가정합니다.
+	readS8(), readU8(), readS16(), readU16(), readS32(), readU32(), readShort(), 
+	readUShort(), readInt(), readUInt(), readFloat(), readDouble(), readS64(), readU64(), readLong(), readULong()
+		포인터 주소로부터 각 함수의 접미사를 타입으로 하여 값을 읽습니다. 예를 들어 readU16 함수는 포인터 주소로부터 부호 없는 16비트 값을 읽습니다.
+	writeS8(value), writeU8(value), writeS16(value), writeU16(value), writeS32(value), writeU32(value),
+	writeShort(value), writeUShort(value), writeInt(value), writeUInt(value), writeFloat(value), 
+	writeDouble(value), writeS64(value), writeU64(value), writeLong(value), writeULong(value)
+		포인터 주소에 각 함수의 접미사를 타입으로 하여 값을 씁니다. 예를 들어 writeU16 함수는 포인터 주소에 부호 없는 16비트 값을 씁니다.
+	readByteArray(length), writeByteArray(bytes)
+		readByteArray 함수는 포인터 주소로부터 length 길이만큼 값을 읽고, writeByteArray 함수는 ArrayBuffer 타입의 배열을 포인터 주소에 씁니다.
+	readCString([size = -1]), readUtf8String([size = -1])
+		인자로 전달한 size 만큼 문자열을 읽어옵니다. 각 함수에 따라 ASCII, Utf-8 문자열 형태로 읽습니다. size 값이 -1일 경우, NULL 값이 나타날 때까지 읽습니다.
+	writeUtf8String(str), writeAnsiString(str)
+		인자로 전달한 문자열을 Utf-8, Ansi 문자열 형태로 포인터 주소에 씁니다. writeAnsiString 함수는 Windows 에서만 유효합니다.
+		
+	var str = Memory.allocUtf8String("Dreamhack"); //NativePointer 형태의 객체를 통해 포인터 주소의 값
+	console.log("str address: " + str);
+	console.log("str.isNull: " + str.isNull());
+	console.log("str.add(4): " + str.add(4));
+	console.log("str.toString(): " + str.toString());
+	console.log("str.readPointer(): " + str.readPointer());
+	console.log("str.readU16(): " + str.readU16());
+	console.log("str.writeU16(0x4141): " + str.writeU16(0x4141));
+	console.log("str.readU16(): " + str.readU16());
+	console.log("str.readUtf8String(): " + str.readUtf8String());
+	
+	$ frida -D emulator-5554 -f com.google.android.calendar -l nativePointer1.js
+		str address: 0x74f89a9b2000
+		str.isNull: false
+		str.add(4): 0x74f89a9b2004
+		str.toString(): 0x74f89a9b2000
+		str.readPointer(): 0x6361686d61657244
+		str.readU16(): 29252
+		str.writeU16(0x4141): 0x74f89a9b2000
+		str.readU16(): 16705
+		str.readUtf8String(): AAeamhack
+	
+	function getFuncModule(funcName) {
+		var addr = Module.findExportByName(null, funcName);
+		var obj = Process.findModuleByAddress(ptr(addr)); //NativePointer 형태의 인자를 처리하는 findModuleByAddress 함수를 사용
+		return obj.path;
+	
+	var libPath;
+	libPath = getFuncModule("open");
+	console.log("Path: " + libPath);
+	
+	frida -D emulator-5554 -f com.google.android.calendar -l nativePointer2.js
+		Path: /system/lib64/libc.so
+
+
+- NativeFunction
+	NativeFunction 은 코드에서 지정한 주소를 실제 함수처럼 사용할 수 있는 객체
+	Frida 코드 내에서 라이브러리 함수를 직접 호출해야하는 경우 NativeFunction 을 이용
+	
+	new NativeFunction(address, returnType, argTypes[, abi])
+	일반적인 C와 같은 타입을 지원하지만 모든 포인터 타입 (int * , char * , void * , …)은 pointer 타입으로 통일
+	
+	var open = new NativeFunction(Module.getExportByName(null, "open"), "int", ["pointer", "int"]); // 내가(공격자) 가 open 어떻게 사용해 이거사용해서 사용
+	var write = new NativeFunction(Module.getExportByName(null, "write"), "ssize_t", ["int", "pointer", "size_t"]);
+	var close = new NativeFunction(Module.getExportByName(null, "close"), "int", ["int"]);
+	
+	var filePath = "/data/data/com.google.android.calendar/test.txt"; // Android
+		// var filePath = "/tmp/test.txt"; 	// iOS
+	var O_WRONLY = 1;
+	var O_CREAT = 0x40;// Android
+		// var O_CREAT = 0x100;	// iOS
+	var fd = open(Memory.allocUtf8String(filePath), O_CREAT|O_WRONLY); //fd가 파일 핸들같은거
+	console.log("file descriptor: " + fd);
+	write(fd, Memory.allocUtf8String("Hello World\n"), 12);
+	close(fd);
+	console.log("done, check " + filePath);
+	
+	frida -D emulator-5554 -f com.google.android.calendar -l nativeFunction.js
+		file descriptor: 52
+		done, check /data/data/com.google.android.calendar/test.txt
+		
+	cat /data/data/com.google.android.calendar/test.txt
+		Hello World
+
+-키워드
+Int64 / Uint64 : 인자로 전달한 값을 숫자로 변환하는 객체
+NativePointer: 인자로 전달된 문자열 값을 메모리 포인터로 변환하는 객체
+NativeFunction: 코드에서 지정한 주소를 실제 함수처럼 사용할 수 있는 객체
